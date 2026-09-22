@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juego de Triqui</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #1e1e2f, #2d2b42);
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+      font-size: 2.5rem;
+      text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+
+    .marcador {
+      display: flex;
+      gap: 30px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 15px 25px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .marcador div {
+      text-align: center;
+      font-size: 1.1rem;
+    }
+
+    .marcador span {
+      display: block;
+      font-size: 1.8rem;
+      font-weight: bold;
+    }
+
+    .jugador-x { color: #ff4757; }
+    .jugador-o { color: #2ed573; }
+
+    #estado {
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+      height: 30px;
+      font-weight: 600;
+    }
+
+    .tablero {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 10px;
+      background-color: #3a3854;
+      padding: 10px;
+      border-radius: 15px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    }
+
+    .celda {
+      width: 100px;
+      height: 100px;
+      background-color: #252338;
+      border: none;
+      border-radius: 10px;
+      font-size: 2.5rem;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    .celda:hover {
+      background-color: #2f2c47;
+    }
+
+    .celda:active {
+      transform: scale(0.95);
+    }
+
+    .celda.x {
+      color: #ff4757;
+    }
+
+    .celda.o {
+      color: #2ed573;
+    }
+
+    .botones {
+      margin-top: 25px;
+      display: flex;
+      gap: 15px;
+    }
+
+    button.btn {
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #70a1ff;
+      color: #ffffff;
+      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    button.btn:hover {
+      background-color: #5352ed;
+    }
+
+    button.btn:active {
+      transform: scale(0.98);
+    }
+
+    button.btn-reset {
+      background-color: #ff6b81;
+    }
+
+    button.btn-reset:hover {
+      background-color: #ff4757;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Triqui</h1>
+
+  <div class="marcador">
+    <div class="jugador-x">Jugador 1 (X)<span id="puntos-x">0</span></div>
+    <div class="jugador-o">Jugador 2 (O)<span id="puntos-o">0</span></div>
+  </div>
+
+  <div id="estado">Turno de: Jugador 1 (X)</div>
+
+  <div class="tablero" id="tablero">
+    <button class="celda" data-indice="0"></button>
+    <button class="celda" data-indice="1"></button>
+    <button class="celda" data-indice="2"></button>
+    <button class="celda" data-indice="3"></button>
+    <button class="celda" data-indice="4"></button>
+    <button class="celda" data-indice="5"></button>
+    <button class="celda" data-indice="6"></button>
+    <button class="celda" data-indice="7"></button>
+    <button class="celda" data-indice="8"></button>
+  </div>
+
+  <div class="botones">
+    <button class="btn" id="reiniciar">Nueva Partida</button>
+    <button class="btn btn-reset" id="reset-marcador">Reiniciar Marcador</button>
+  </div>
+
+  <script>
+    const celdas = document.querySelectorAll('.celda');
+    const textoEstado = document.getElementById('estado');
+    const btnReiniciar = document.getElementById('reiniciar');
+    const btnResetMarcador = document.getElementById('reset-marcador');
+    const puntosXElem = document.getElementById('puntos-x');
+    const puntosOElem = document.getElementById('puntos-o');
+
+    let jugadorActual = 'X';
+    let estadoJuego = ["", "", "", "", "", "", "", "", ""];
+    let juegoActivo = true;
+    let puntosX = 0;
+    let puntosO = 0;
+
+    const combinacionesGanadoras = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // Filas
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columnas
+      [0, 4, 8], [2, 4, 6]             // Diagonales
+    ];
+
+    function manejarClickCelda(evento) {
+      const celdaClickeada = evento.target;
+      const indice = parseInt(celdaClickeada.getAttribute('data-indice'));
+
+      if (estadoJuego[indice] !== "" || !juegoActivo) {
+        return;
+      }
+
+      actualizarCelda(celdaClickeada, indice);
+      verificarResultado();
+    }
+
+    function actualizarCelda(celda, indice) {
+      estadoJuego[indice] = jugadorActual;
+      celda.textContent = jugadorActual;
+      celda.classList.add(jugadorActual.toLowerCase());
+    }
+
+    function cambiarJugador() {
+      jugadorActual = jugadorActual === 'X' ? 'O' : 'X';
+      const nombreJugador = jugadorActual === 'X' ? 'Jugador 1 (X)' : 'Jugador 2 (O)';
+      textoEstado.textContent = `Turno de: ${nombreJugador}`;
+    }
+
+    function verificarResultado() {
+      let victoria = false;
+
+      for (let i = 0; i < combinacionesGanadoras.length; i++) {
+        const [a, b, c] = combinacionesGanadoras[i];
+        if (estadoJuego[a] === "" || estadoJuego[b] === "" || estadoJuego[c] === "") {
+          continue;
+        }
+        if (estadoJuego[a] === estadoJuego[b] && estadoJuego[b] === estadoJuego[c]) {
+          victoria = true;
+          break;
+        }
+      }
+
+      if (victoria) {
+        const ganador = jugadorActual === 'X' ? 'Jugador 1 (X)' : 'Jugador 2 (O)';
+        textoEstado.textContent = `¡${ganador} ha ganado! 🎉`;
+        juegoActivo = false;
+
+        if (jugadorActual === 'X') {
+          puntosX++;
+          puntosXElem.textContent = puntosX;
+        } else {
+          puntosO++;
+          puntosOElem.textContent = puntosO;
+        }
+        return;
+      }
+
+      const empate = !estadoJuego.includes("");
+      if (empate) {
+        textoEstado.textContent = '¡Empate!';
+        juegoActivo = false;
+        return;
+      }
+
+      cambiarJugador();
+    }
+
+    function reiniciarJuego() {
+      jugadorActual = 'X';
+      estadoJuego = ["", "", "", "", "", "", "", "", ""];
+      juegoActivo = true;
+      textoEstado.textContent = `Turno de: Jugador 1 (X)`;
+
+      celdas.forEach(celda => {
+        celda.textContent = "";
+        celda.classList.remove('x', 'o');
+      });
+    }
+
+    function reiniciarMarcador() {
+      puntosX = 0;
+      puntosO = 0;
+      puntosXElem.textContent = 0;
+      puntosOElem.textContent = 0;
+      reiniciarJuego();
+    }
+
+    celdas.forEach(celda => celda.addEventListener('click', manejarClickCelda));
+    btnReiniciar.addEventListener('click', reiniciarJuego);
+    btnResetMarcador.addEventListener('click', reiniciarMarcador);
+  </script>
+</body>
+</html>
+
